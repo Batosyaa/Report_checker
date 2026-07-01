@@ -6,6 +6,7 @@
 - логируем результат
 """
 
+import sys
 import time
 
 import config
@@ -13,6 +14,18 @@ from logger import setup_logger
 
 from drive_service import get_bin_set
 from sheets_service import process_sheet
+
+
+def validate_config():
+
+    if not config.GOOGLE_DRIVE_FOLDER_ID:
+        raise ValueError("GOOGLE_DRIVE_FOLDER_ID is empty. Set it in config.py before running.")
+
+    if not config.GOOGLE_SHEET_ID:
+        raise ValueError("GOOGLE_SHEET_ID is empty. Set it in config.py before running.")
+
+    if not config.WORKSHEET_NAME:
+        raise ValueError("WORKSHEET_NAME is empty. Set it in config.py before running.")
 
 
 def main():
@@ -23,6 +36,8 @@ def main():
     logger.info("===== REPORT CHECKER STARTED =====")
 
     try:
+        validate_config()
+
         logger.info("Fetching BINs from Google Drive...")
         bin_set = get_bin_set()
 
@@ -43,8 +58,10 @@ def main():
     except Exception as e:
         logger.error("===== ERROR OCCURRED =====")
         logger.error(str(e), exc_info=True)
+        sys.exit(1)
 
-    logger.info("===== REPORT CHECKER FINISHED =====")
+    finally:
+        logger.info("===== REPORT CHECKER FINISHED =====")
 
 
 if __name__ == "__main__":
