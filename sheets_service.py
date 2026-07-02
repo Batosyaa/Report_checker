@@ -46,18 +46,46 @@ def get_column_indexes(header_row):
     return bin_index, result_index
 
 
+def _column_index(letters):
+    """'A' -> 0, 'C' -> 2, 'AA' -> 26 ..."""
+
+    index = 0
+    for ch in letters.upper():
+        index = index * 26 + (ord(ch) - ord("A") + 1)
+
+    return index - 1
+
+
 def _sheet_name_and_start_row():
+    """
+    Parses WORKSHEET_NAME like "Sheet1", "Sheet1!C4" or "Sheet1!C4:F"
+    into (sheet_name, start_row, start_col_index).
+
+    start_col_index is 0-based and reflects the first column of the
+    range (e.g. "C4" -> 2), so that column letters computed from a
+    header index found within the fetched range can be translated
+    back into real sheet columns.
+    """
+
     worksheet = config.WORKSHEET_NAME
 
     if "!" in worksheet:
         sheet_name, range_part = worksheet.split("!", 1)
-        match = re.match(r"[A-Za-z]*(\d+)", range_part)
-        start_row = int(match.group(1)) if match else 1
+        match = re.match(r"([A-Za-z]*)(\d+)", range_part)
+
+        if match:
+            col_letters = match.group(1)
+            start_row = int(match.group(2))
+            start_col_index = _column_index(col_letters) if col_letters else 0
+        else:
+            start_row = 1
+            start_col_index = 0
     else:
         sheet_name = worksheet
         start_row = 1
+        start_col_index = 0
 
-    return sheet_name, start_row
+    return sheet_name, start_row, start_col_index
 
 
 def _column_letter(index):
@@ -115,8 +143,8 @@ def update_sheet(updates, result_idx):
     if not updates:
         return
 
-    sheet_name, start_row = _sheet_name_and_start_row()
-    col_letter = _column_letter(result_idx)
+    sheet_name, start_row, start_col_index = _sheet_name_and_start_row()
+    col_letter = _column_letter(start_col_index + result_idx)
 
     data = []
     for update in updates:

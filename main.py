@@ -19,13 +19,13 @@ from sheets_service import process_sheet
 def validate_config():
 
     if not config.GOOGLE_DRIVE_FOLDER_ID:
-        raise ValueError("GOOGLE_DRIVE_FOLDER_ID is empty. Set it in config.py before running.")
+        raise ValueError("GOOGLE_DRIVE_FOLDER_ID is empty. Set it in .env before running.")
 
     if not config.GOOGLE_SHEET_ID:
-        raise ValueError("GOOGLE_SHEET_ID is empty. Set it in config.py before running.")
+        raise ValueError("GOOGLE_SHEET_ID is empty. Set it in .env before running.")
 
     if not config.WORKSHEET_NAME:
-        raise ValueError("WORKSHEET_NAME is empty. Set it in config.py before running.")
+        raise ValueError("WORKSHEET_NAME is empty. Set it in .env before running.")
 
 
 def main():

@@ -17,7 +17,7 @@
 5. Считывает таблицу
 6. Сравнивает БИНы из таблицы с файлами в Drive
 7. Обновляет колонку результата:
-   - "Есть" — документ найден
+   - "Да" — документ найден
    - "Нет" — документа нет
 8. Записывает логи выполнения
 
@@ -29,7 +29,7 @@
 report_checker/
 
 ├── main.py                 # Точка входа
-├── config.py               # Конфигурация
+├── config.py               # Конфигурация (читает .env)
 ├── logger.py               # Логирование
 ├── google_client.py        # Авторизация Google API
 ├── drive_service.py        # Работа с Google Drive
@@ -37,6 +37,9 @@ report_checker/
 
 ├── requirements.txt
 ├── README.md
+
+├── .env.example             # Шаблон конфигурации, безопасно коммитить
+├── .env                      # Реальные значения, В GIT НЕ ПОПАДАЕТ
 
 ├── credentials/
 │   └── service_account.json
@@ -67,35 +70,49 @@ pip install -r requirements.txt
 
 ---
 
-## Настройка
+## Настройка (.env)
 
-Все основные настройки находятся в файле `config.py`.
+Все настройки читаются из переменных окружения через файл `.env`
+в корне проекта. Он в `.gitignore` — реальные ID никогда не попадут в git.
 
-### Обязательно заполнить:
-
-#### ID папки Google Drive
-```python
-GOOGLE_DRIVE_FOLDER_ID = "your_folder_id"
+```bash
+cp .env.example .env
 ```
 
-#### ID Google Таблицы
-```python
-GOOGLE_SHEET_ID = "your_spreadsheet_id"
-WORKSHEET_NAME = "Sheet1"
+Затем заполните `.env`:
+
+```bash
+SERVICE_ACCOUNT_FILE=credentials/service_account.json
+GOOGLE_DRIVE_FOLDER_ID=your_folder_id
+GOOGLE_SHEET_ID=your_spreadsheet_id
+WORKSHEET_NAME=Sheet1!C4:F
+BIN_COLUMN=БИН
+RESULT_COLUMN=Наличие отчета
+FOUND_TEXT=Да
+NOT_FOUND_TEXT=Нет
 ```
 
-#### Названия колонок
-В таблице должны быть заголовки:
+### ID папки Google Drive
 
-- колонка БИН (например: `БИН`)
-- колонка результата (например: `Наличие отчета`)
+Из URL папки: `drive.google.com/drive/folders/<ЭТО>`
 
-И в конфиге:
+### ID Google Таблицы
 
-```python
-BIN_COLUMN = "БИН"
-RESULT_COLUMN = "Наличие отчета"
-```
+Из URL таблицы: `docs.google.com/spreadsheets/d/<ЭТО>/edit`
+
+### WORKSHEET_NAME — имя листа и диапазон
+
+- `"Sheet1"` — заголовки предполагаются в строке 1, колонки с A
+- `"Sheet1!C4:F"` — заголовки в строке 4, колонки начиная с C
+  (например когда БИН находится в C4, а результат — в F4)
+
+Скрипт сам вычисляет реальную колонку для записи результата на основе
+начальной колонки диапазона — колонки указывать вручную больше нигде не нужно.
+
+### Названия колонок
+
+В таблице должны быть заголовки, совпадающие с `BIN_COLUMN` и `RESULT_COLUMN`
+из `.env` (по умолчанию — `БИН` и `Наличие отчета`).
 
 ---
 
@@ -112,17 +129,20 @@ RESULT_COLUMN = "Наличие отчета"
 credentials/service_account.json
 ```
 
+(путь можно изменить через `SERVICE_ACCOUNT_FILE` в `.env`)
+
 ---
 
 ### 2. Выдать доступ
 
-Нужно вручную выдать доступ сервисному аккаунту:
+Нужно вручную выдать доступ сервисному аккаунту (email вида
+`...@...iam.gserviceaccount.com`, указан в JSON-ключе как `client_email`):
 
 #### Google Drive папка:
-Поделиться папкой с email сервисного аккаунта
+Поделиться папкой с email сервисного аккаунта (доступ Viewer)
 
 #### Google Sheets:
-Также открыть доступ для этого же email
+Также открыть доступ для этого же email (доступ Editor)
 
 ---
 
@@ -140,7 +160,7 @@ python main.py
 
 | БИН           | Наличие отчета |
 |---------------|----------------|
-| 123456789012  | Есть           |
+| 123456789012  | Да             |
 | 987654321000  | Нет            |
 
 ---
@@ -164,6 +184,14 @@ logs/report_checker.log
 
 ---
 
+## Тесты
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+---
+
 ## Производительность
 
 - Используется batch update (одним запросом)
@@ -178,10 +206,14 @@ logs/report_checker.log
 → Проверь, что service account добавлен в доступ к Drive и Sheets
 
 ### 2. Ошибка колонок
-→ Проверь названия в `config.py`
+→ Проверь названия в `.env` (`BIN_COLUMN`, `RESULT_COLUMN`)
 
 ### 3. Пустая таблица
-→ Первая строка должна быть заголовками
+→ Первая строка диапазона должна быть заголовками
+
+### 4. .env не подхватывается
+→ Убедись, что файл называется именно `.env` и лежит в корне проекта
+  (рядом с `config.py`), а не `.env.txt` или в другой папке
 
 ---
 
@@ -189,7 +221,8 @@ logs/report_checker.log
 
 - Не использовать личный Google аккаунт
 - Всегда использовать Service Account
-- Не менять структуру таблицы без обновления config.py
+- Не менять структуру таблицы без обновления `.env`
+- Не коммитить `.env` и `credentials/` — они уже в `.gitignore`
 
 ---
 
